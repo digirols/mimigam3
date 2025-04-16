@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Encryption of Us</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Source+Code+Pro:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+        }
+        /* Terminal styles */
+        .terminal {
+            font-family: 'Source Code Pro', monospace;
+            background-color: #0d0d0d;
+            border: 1px solid #333;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+            height: 80vh; /* Make terminal take most of the screen height */
+            width: 90vw; /* Make terminal wider */
+            max-width: 800px; /* Max width */
+            display: flex;
+            flex-direction: column; /* Stack output and input vertically */
+            animation: fadeIn 1s ease-in-out;
+        }
+        /* Output area styling */
+        .terminal-output {
+            flex-grow: 1; /* Allow output to take available space */
+            overflow-y: auto; /* Enable vertical scrolling */
+            padding: 1rem;
+            scrollbar-width: thin; /* For Firefox */
+            scrollbar-color: #00ff00 #0d0d0d; /* For Firefox */
+        }
+        /* Scrollbar styling for Webkit browsers (Chrome, Safari) */
+        .terminal-output::-webkit-scrollbar {
+            width: 8px;
+        }
+        .terminal-output::-webkit-scrollbar-track {
+            background: #0d0d0d;
+        }
+        .terminal-output::-webkit-scrollbar-thumb {
+            background-color: #00ff00;
+            border-radius: 4px;
+            border: 2px solid #0d0d0d;
+        }
+
+        /* Text styling within output */
+        .output-line { margin-bottom: 0.25rem; }
+        .system-msg { color: #00ff00; } /* Green for system messages */
+        .user-input-msg { color: #ffffff; } /* White for user's typed input */
+        .error-msg { color: #ff4d4d; } /* Red for errors */
+        .success-msg { color: #4dff4d; } /* Brighter green for success */
+        .question-msg { color: #ffff00; } /* Yellow for questions */
+        .info-msg { color: #00bcd4; } /* Cyan for info/hints */
+        .encrypted-msg { color: #ff9800; font-style: italic;} /* Orange and italic for encrypted */
+
+        /* Input area styling */
+        .terminal-input-area {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-top: 1px solid #333; /* Separator line */
+        }
+        .terminal-prompt {
+            color: #00ff00;
+            margin-right: 0.5rem;
+        }
+        .terminal-prompt::after {
+            content: '_';
+            animation: blink 1s step-end infinite;
+            margin-left: 2px; /* Space between prompt and cursor */
+        }
+        .terminal-input {
+            background-color: transparent;
+            border: none;
+            color: #ffffff; /* User types in white */
+            caret-color: #00ff00; /* Green cursor */
+            outline: none;
+            flex-grow: 1; /* Take remaining space */
+            font-family: 'Source Code Pro', monospace;
+            font-size: 1em; /* Match output font size */
+        }
+
+        /* Keyframe animations */
+        @keyframes blink { 50% { opacity: 0; } }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        .animate-shake { animation: shake 0.5s ease-in-out; }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .terminal {
+                width: 95vw;
+                height: 85vh;
+            }
+        }
+    </style>
+</head>
+<body style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 1rem;">
+
+    <div id="terminal" class="terminal rounded-lg">
+        <div id="terminal-output" class="terminal-output">
+            <!-- Output will be added here dynamically -->
+        </div>
+
+        <form id="terminal-form" class="terminal-input-area">
+            <label for="terminal-input-field" class="terminal-prompt">&gt;</label>
+            <input type="text" id="terminal-input-field" name="command" class="terminal-input" autocomplete="off" required>
+        </form>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const terminal = document.getElementById('terminal');
+        const terminalOutput = document.getElementById('terminal-output');
+        const terminalForm = document.getElementById('terminal-form');
+        const terminalInput = document.getElementById('terminal-input-field');
+
+        // --- Game State ---
+        let currentLevel = 0; // Start at level 0
+        let username = "AGENT_X"; // Placeholder, maybe ask later
+        let typingSpeed = 30; // ms per character for typing effect
+
+        // --- Level Definitions ---
+        // !! IMPORTANT !! Customize these levels, questions, answers, and messages!
+        const levels = [
+            // Level 0: Initial Authentication
+            {
+                type: 'display',
+                messages: [
+                    { text: "// SYSTEM BOOTING...", class: 'system-msg' },
+                    { text: "// SECURE CHANNEL ESTABLISHED.", class: 'system-msg' },
+                    { text: "// ACCESSING MEMORY VAULT_RCK_&_HRT...", class: 'system-msg' },
+                ]
+            },
+            {
+                type: 'question',
+                question: { text: "Authentication required. Identify yourself with our first shared secret (e.g., first date location).", class: 'question-msg' },
+                answer: "manivela", 
+                successMessage: { text: ">>> ACCESS GRANTED. Welcome mimi mu<3.", class: 'success-msg' },
+                failureMessage: { text: ">>> ACCESS DENIED. Incorrect. Initiate Poop Process.", class: 'error-msg' }
+            },
+            // Level 1: Simple Cipher Decryption
+            {
+                type: 'display',
+                messages: [
+                    { text: "// Analyzing secure stream of love...", class: 'system-msg' },
+                    { text: "// Encrypted fragment of us detected:", class: 'system-msg' },
+                    { text: "    ymf xj flfut lnf ufsyf. jnxfn yt pfqzyjwt rnrn lnf ufsyf. jajs bmjs n'r qjfwsnsl ufsyf xj xpjkytrfn", class: 'encrypted-msg' }, // shifted by 5
+                    { text: "// Caesar cipher suspected. Use online conversion tool ;)", class: 'info-msg' }
+                ]
+            },
+            {
+                type: 'question',
+                question: { text: "Identify the numeric decryption key (the shift value).", class: 'question-msg' },
+                answer: "5",
+                successMessage: { text: ">>> KEY ACCEPTED. Pas sto epomeno level mimimaki", class: 'success-msg' },
+                failureMessage: { text: ">>> INCORRECT KEY. The Farting continues...", class: 'error-msg' }
+            },
+            // Level 2: Another Memory Question
+            {
+                type: 'display',
+                messages: [
+                    { text: "// Memory integrity check required.", class: 'system-msg' },
+                ]
+            },
+            {
+                type: 'question',
+                question: { text: "What is the name of the fluffy poopi who stole our hearts?", class: 'question-msg' },
+                answer: "ian", // <<< CHANGE THIS TO YOUR PET'S NAME (or relevant secret)
+                successMessage: { text: ">>> MEMORY CONFIRMED. IAAAAAAAAAANNNNNNNNN :3", class: 'success-msg' },
+                failureMessage: { text: ">>> MEMORY FRAGMENTATION DETECTED. *scratch marks* *hissing sound*", class: 'error-msg' }
+            },
+            // Level 3: Future Riddle (Example)
+             {
+                type: 'display',
+                messages: [
+                    { text: "// Projecting future coordinates...", class: 'system-msg' },
+                ]
+            },
+            {
+                type: 'question',
+                question: { text: "se poia polh tha eimaste next year?", class: 'question-msg' },
+                answer: "thessaloniki", // <<< CHANGE THIS TO YOUR DREAM CITY/ANSWER
+                successMessage: { text: ">>> OUR HOUSE UNLOCKED. (yayyy) (and my heart too ofc)", class: 'success-msg' },
+                failureMessage: { text: ">>> POOPER", class: 'error-msg' }
+            },
+            // Level 4: End / Commitment
+            {
+                type: 'display',
+                messages: [
+                    { text: "// MIMI CONNECTION ESTABLISHED.", class: 'system-msg' },
+                    { text: "// DECRYPTION COMPLETE. DISPLAY MY LOVE", class: 'system-msg' },
+                    { text: "--------------------------------------------------", class: 'system-msg' },
+                    { text: "My mimi,", class: 'success-msg' },
+                    { text: "Eisai h agaph ths zwhs mou.I love you and I love sharing my life with you.", class: 'success-msg' },
+                    { text: "Let's make many more levels, memories, kai shared moments.", class: 'success-msg' },
+                    { text: "Forever yours,", class: 'success-msg' },
+                    { text: "[Thanos ~to mimi su~]", class: 'success-msg' }, 
+                    { text: "--------------------------------------------------", class: 'system-msg' },
+                    { text: "// SESSION TERMINATED.", class: 'system-msg' },
+                ]
+            },
+        ];
+
+        // --- Functions ---
+
+        /**
+         * Types out a message with a typing effect.
+         * @param {string} text - The text content to add.
+         * @param {string} className - The CSS class to apply for styling.
+         * @param {Function} callback - Function to call when typing is complete.
+         */
+        function typeOutMessage(text, className = 'system-msg', callback) {
+            const line = document.createElement('p');
+            line.className = `output-line ${className} typing`;
+            terminalOutput.appendChild(line);
+            
+            let i = 0;
+            const typeInterval = setInterval(function() {
+                if (i < text.length) {
+                    line.textContent += text.charAt(i);
+                    i++;
+                    // Scroll to the bottom as we type
+                    terminalOutput.scrollTop = terminalOutput.scrollHeight;
+                } else {
+                    clearInterval(typeInterval);
+                    if (callback) callback();
+                }
+            }, typingSpeed);
+        }
+
+        /**
+         * Appends a line of text to the terminal output immediately (no typing effect).
+         * @param {string} text - The text content to add.
+         * @param {string} className - The CSS class to apply for styling.
+         */
+        function appendToOutputInstant(text, className = 'system-msg') {
+            const line = document.createElement('p');
+            line.className = `output-line ${className}`;
+            line.textContent = text;
+            terminalOutput.appendChild(line);
+            // Scroll to the bottom
+            terminalOutput.scrollTop = terminalOutput.scrollHeight;
+        }
+
+        /**
+         * Handles the submission of user input.
+         * @param {Event} event - The form submission event.
+         */
+        function handleInput(event) {
+            event.preventDefault(); // Prevent page reload
+            const inputValue = terminalInput.value.trim();
+            if (!inputValue) return; // Ignore empty input
+
+            // Display the user's input in the terminal
+            appendToOutputInstant(`> ${inputValue}`, 'user-input-msg');
+            terminalInput.value = ''; // Clear the input field
+            terminalInput.disabled = true; // Disable input while processing
+
+            // Process the input based on the current level
+            setTimeout(() => {
+                processLevelInput(inputValue);
+            }, 500); // Small delay for effect
+        }
+
+        /**
+         * Processes the user's input for the current level.
+         * @param {string} userInput - The cleaned user input.
+         */
+        function processLevelInput(userInput) {
+            const levelData = levels[currentLevel];
+
+            if (!levelData || levelData.type !== 'question') {
+                // If current level isn't a question or levels are finished
+                if (currentLevel >= levels.length) {
+                    // Maybe allow restarting or just do nothing.
+                }
+                return;
+            }
+
+            // Check the answer (case-insensitive)
+            if (userInput.toLowerCase() === levelData.answer.toLowerCase()) {
+                // Correct answer
+                typeOutMessage(levelData.successMessage.text, levelData.successMessage.class, () => {
+                    currentLevel++; // Move to the next level/step
+                    setTimeout(() => {
+                        renderLevel(); // Render the next part with a slight delay
+                    }, 800);
+                });
+            } else {
+                // Incorrect answer
+                typeOutMessage(levelData.failureMessage.text, levelData.failureMessage.class, () => {
+                    // Add shake animation
+                    terminal.classList.add('animate-shake');
+                    setTimeout(() => {
+                        terminal.classList.remove('animate-shake');
+                        renderLevel(true); // Re-ask the question
+                    }, 800);
+                });
+            }
+        }
+
+        /**
+         * Displays messages for a level sequentially with typing effects.
+         * @param {Array} messages - Array of message objects with text and class properties.
+         * @param {number} index - Current message index.
+         * @param {Function} completeCallback - Function to call when all messages are displayed.
+         */
+        function displayMessagesSequentially(messages, index, completeCallback) {
+            if (index >= messages.length) {
+                if (completeCallback) completeCallback();
+                return;
+            }
+
+            const msg = messages[index];
+            typeOutMessage(msg.text, msg.class, () => {
+                // Proceed to next message after a small delay
+                setTimeout(() => {
+                    displayMessagesSequentially(messages, index + 1, completeCallback);
+                }, 400);
+            });
+        }
+
+        /**
+         * Renders the content for the current level.
+         * @param {boolean} isRetry - Flag indicating if we are re-rendering the same question after a wrong answer.
+         */
+        function renderLevel(isRetry = false) {
+            if (currentLevel >= levels.length) {
+                typeOutMessage("// END OF TRANSMISSION.", 'system-msg', () => {
+                    terminalInput.disabled = true; // Disable further input
+                    terminalInput.placeholder = "Session ended.";
+                });
+                return;
+            }
+
+            const levelData = levels[currentLevel];
+
+            if (levelData.type === 'display') {
+                // For display levels, show messages sequentially
+                if (!isRetry) {
+                    displayMessagesSequentially(levelData.messages, 0, () => {
+                        // After displaying all messages, check next level
+                        if (currentLevel + 1 < levels.length) {
+                            currentLevel++; // Move to next level
+                            setTimeout(() => {
+                                renderLevel(); // Render next level after delay
+                            }, 800);
+                        } else {
+                            currentLevel++;
+                            renderLevel(); // Render end state
+                        }
+                    });
+                }
+            } else if (levelData.type === 'question') {
+                // Display the question with typing effect
+                typeOutMessage(levelData.question.text, levelData.question.class, () => {
+                    terminalInput.disabled = false; // Enable input
+                    terminalInput.focus(); // Focus the input field
+                });
+            }
+        }
+
+        // --- Initialization ---
+        terminalForm.addEventListener('submit', handleInput);
+
+        // Welcome message and start first level after a delay
+        setTimeout(() => {
+            renderLevel();
+        }, 500);
+    </script>
+</body>
+</html>
